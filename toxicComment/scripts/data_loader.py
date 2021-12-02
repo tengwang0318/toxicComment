@@ -5,17 +5,17 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import Dataset
 import torch
 
-set_seed()
+set_seed(CONFIG.seed)
 
 
 def create_Folds():
-    df = pd.read_csv('jigsaw-toxic-severity-rating/validation_data.csv')
+    df = pd.read_csv('../jigsaw-toxic-severity-rating/validation_data.csv')
     skf = StratifiedKFold(n_splits=CONFIG.n_fold, shuffle=True, random_state=CONFIG.seed)
 
     for fold, (_, val) in enumerate(skf.split(X=df, y=df.worker)):
-        df.loc[val, "kfold"] = int(fold)
+        df.loc[val, "Kfold"] = int(fold)
 
-    df['kfold'] = df['kfold'].astype(int)
+    df['Kfold'] = df['Kfold'].astype(int)
     return df
 
 

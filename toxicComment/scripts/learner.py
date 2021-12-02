@@ -113,9 +113,10 @@ def run_training(model, optimizer, scheduler, num_epochs, fold):
 def fetch_scheduler(optimizer):
     if CONFIG.scheduler == 'CosineAnnealingLR':
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=CONFIG.T_max,
-                                                   eta_min=CONFIG.min_lr)
+                                                   eta_min=CONFIG.min_learning_rate)
     elif CONFIG.scheduler == 'CosineAnnealingWarmRestarts':
-        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=CONFIG.T_0, eta_min=CONFIG.min_lr)
+        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=CONFIG.T_0,
+                                                             eta_min=CONFIG.min_learning_rate)
     elif CONFIG.scheduler == None:
         return None
 

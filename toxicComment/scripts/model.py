@@ -5,7 +5,7 @@ import numpy as np
 
 from config import set_seed, CONFIG
 
-set_seed()
+set_seed(CONFIG.seed)
 
 
 class Model(nn.Module):
