@@ -11,4 +11,3 @@ for fold in range(0, CONFIG.n_fold):
     scheduler = fetch_scheduler(optimizer)
 
     model, history = run_training(model, optimizer, scheduler, num_epochs=CONFIG.epochs, fold=fold)
-

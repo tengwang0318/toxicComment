@@ -106,7 +106,7 @@ def run_training(model, optimizer, scheduler, num_epochs, fold):
             best_model_weights = copy.deepcopy(model.state_dict())
             PATH = f"FOLD-{fold}.bin"
             torch.save(model.state_dict(), PATH)
-
+    print("best epoch loss ",best_epoch_loss)
     return model, history
 
 
