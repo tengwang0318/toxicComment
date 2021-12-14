@@ -75,9 +75,9 @@ def valid_one_epoch(model, dataloader, device, epoch, predictions, real_results)
             bar.set_postfix(EPOCH=epoch, VALIDATION_LOSS=epoch_loss)
             try:
                 predictions[idx:idx + batch_size] = \
-                    (more_toxic_outputs == less_toxic_outputs).cpu().numpy()
+                    (more_toxic_outputs > less_toxic_outputs).cpu().numpy()
             except ValueError:
-                print(batch_size, (more_toxic_outputs == less_toxic_outputs).shape)
+                print(batch_size, (more_toxic_outputs > less_toxic_outputs).shape)
 
             idx += batch_size
     print("Precision: ", (real_results == predictions).sum() / len(real_results))
