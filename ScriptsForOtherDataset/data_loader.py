@@ -33,7 +33,7 @@ class ToxicTrainingDataset(Dataset):
         return {
             'toxic_comment_ids': torch.tensor(toxic_comment_ids, dtype=torch.long),
             'toxic_comment_mask': torch.tensor(toxic_comment_mask, dtype=torch.long),
-            'score': torch.tensor(score, dtype=torch.long)
+            'score': torch.tensor(score, dtype=torch.float)
         }
 
 

@@ -24,7 +24,7 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
     for step, data in bar:
         comment_ids = data['toxic_comment_ids'].to(device, dtype=torch.long)
         comment_mask = data['toxic_comment_mask'].to(device, dtype=torch.long)
-        scores = data['score'].to(device, dtype=torch.long)
+        scores = data['score'].to(device, dtype=torch.float)
 
         batch_size = comment_ids.size(0)
         outputs = model(comment_ids, comment_mask)
@@ -46,12 +46,14 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
     return epoch_loss
 
 
-def valid_one_epoch(model, dataloader, device, epoch):
+
+def valid_one_epoch(model, dataloader, device, epoch, predictions, real_results):
     model.eval()
     data_size = 0
     running_loss = 0
+    # predictions, real_results = np.ones((len(dataloader), 1)), np.ones((len(dataloader), 1))
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    predictions, real_results = np.ones(len(dataloader)), np.ones(len(dataloader))
+
     idx = 0
     for step, data in bar:
         with torch.no_grad():
@@ -71,36 +73,43 @@ def valid_one_epoch(model, dataloader, device, epoch):
             data_size += batch_size
             epoch_loss = running_loss / data_size
             bar.set_postfix(EPOCH=epoch, VALIDATION_LOSS=epoch_loss)
+            try:
+                predictions[idx:idx + batch_size] = \
+                    (more_toxic_outputs == less_toxic_outputs).cpu().numpy()
+            except ValueError:
+                print(batch_size, (more_toxic_outputs == less_toxic_outputs).shape)
 
-            predictions[idx:idx + step] = targets
-            idx += step
+            idx += batch_size
     print("Precision: ", (real_results == predictions).sum() / len(real_results))
 
     return epoch_loss
 
 
 def prepare_dataloader():
-    df_train = pd.read_csv('../task_a_distant.tsv')
+    df_train = pd.read_csv('/content/task_a_distant.tsv', delimiter='\t')
     df_valid = pd.read_csv('../jigsaw-toxic-severity-rating/validation_data.csv')
-
+    # print(len(df_valid), "!!!!!!!!")
+    df_train = df_train[:int(.00001 * len(df_train))]
     train_dataset = ToxicTrainingDataset(df_train, tokenizer=CONFIG.tokenizer, max_length=CONFIG.max_length)
     valid_dataset = ToxicValidationDataset(df_valid, tokenizer=CONFIG.tokenizer, max_length=CONFIG.max_length)
     train_loader = DataLoader(train_dataset, batch_size=CONFIG.train_batch_size, num_workers=2, shuffle=True,
                               pin_memory=True, drop_last=True)
     valid_loader = DataLoader(valid_dataset, batch_size=CONFIG.valid_batch_size, num_workers=2, shuffle=False,
                               pin_memory=True)
-    return train_loader, valid_loader
+    predictions, real_results = np.ones((len(df_valid), 1)), np.ones((len(df_valid), 1))
+    return train_loader, valid_loader, predictions, real_results
 
 
 def run_training(model, optimizer, scheduler, num_epochs):
     best_model_weights = copy.deepcopy(model.state_dict())
     best_epoch_loss = np.inf
     history = defaultdict(list)
-    train_data_loader, valid_data_loader = prepare_dataloader()
+    train_data_loader, valid_data_loader, predictions, real_results = prepare_dataloader()
     for epoch in range(1, num_epochs + 1):
         train_epoch_loss = train_one_epoch(model, optimizer, scheduler, dataloader=train_data_loader,
                                            device=CONFIG.device, epoch=epoch)
-        valid_epoch_loss = valid_one_epoch(model, valid_data_loader, device=CONFIG.device, epoch=epoch)
+        valid_epoch_loss = valid_one_epoch(model, valid_data_loader, device=CONFIG.device, epoch=epoch,
+                                           predictions=predictions, real_results=real_results)
         history['TRAIN_LOSS'].append(train_epoch_loss)
         history['VALID_LOSS'].append(valid_epoch_loss)
 
