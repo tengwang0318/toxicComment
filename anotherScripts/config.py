@@ -19,7 +19,7 @@ class CONFIG:
     max_length = 150
 
 
-    margin = .5
+    margin = .2
     device = torch.device('cuda:0' if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
