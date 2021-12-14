@@ -53,6 +53,8 @@ def valid_one_epoch(model, dataloader, device, epoch):
     data_size = 0
     running_loss = 0
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    predictions, real_results = np.ones(len(dataloader)), np.ones(len(dataloader))
+    idx = 0
     for step, data in bar:
         with torch.no_grad():
             more_toxic_ids = data['more_toxic_ids'].to(device, dtype=torch.long)
@@ -72,10 +74,14 @@ def valid_one_epoch(model, dataloader, device, epoch):
             epoch_loss = running_loss / data_size
             bar.set_postfix(EPOCH=epoch, VALIDATION_LOSS=epoch_loss)
 
+            predictions[idx:idx + step] = targets
+            idx += step
+    print("Precision: ", (real_results == predictions).sum() / len(real_results))
+
     return epoch_loss
 
 
-def prepare_dataloader(fold):
+def prepare_dataloader():
     df_train = pd.read_csv('../ruddit_pairs.csv')
     df_valid = pd.read_csv('../jigsaw-toxic-severity-rating/validation_data.csv')
 
@@ -88,11 +94,11 @@ def prepare_dataloader(fold):
     return train_loader, valid_loader
 
 
-def run_training(model, optimizer, scheduler, num_epochs, fold):
+def run_training(model, optimizer, scheduler, num_epochs):
     best_model_weights = copy.deepcopy(model.state_dict())
     best_epoch_loss = np.inf
     history = defaultdict(list)
-    train_data_loader, valid_data_loader = prepare_dataloader(fold)
+    train_data_loader, valid_data_loader = prepare_dataloader()
     for epoch in range(1, num_epochs + 1):
         train_epoch_loss = train_one_epoch(model, optimizer, scheduler, dataloader=train_data_loader,
                                            device=CONFIG.device, epoch=epoch)
@@ -104,7 +110,7 @@ def run_training(model, optimizer, scheduler, num_epochs, fold):
             print("The best loss was {}, Current Loss: {}".format(best_epoch_loss, valid_epoch_loss))
             best_epoch_loss = valid_epoch_loss
             best_model_weights = copy.deepcopy(model.state_dict())
-            PATH = f"FOLD-{fold}.bin"
+            PATH = f"model.bin"
             torch.save(model.state_dict(), PATH)
     print("best epoch loss ", best_epoch_loss)
     return model, history
@@ -119,6 +125,5 @@ def fetch_scheduler(optimizer):
                                                              eta_min=CONFIG.min_learning_rate)
     elif CONFIG.scheduler == None:
         return None
-
 
     return scheduler

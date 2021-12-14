@@ -8,15 +8,8 @@ import torch
 set_seed(CONFIG.seed)
 
 
-# def create_Folds():
-#     df = pd.read_csv('../jigsaw-toxic-severity-rating/validation_data.csv')
-#     skf = StratifiedKFold(n_splits=CONFIG.n_fold, shuffle=True, random_state=CONFIG.seed)
-#
-#     for fold, (_, val) in enumerate(skf.split(X=df, y=df.worker)):
-#         df.loc[val, "Kfold"] = int(fold)
-#
-#     df['Kfold'] = df['Kfold'].astype(int)
-#     return df
+
+
 class ToxicTrainingDataset(Dataset):
     def __init__(self, df, tokenizer, max_length):
         super(ToxicTrainingDataset, self).__init__()

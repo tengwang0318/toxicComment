@@ -10,7 +10,7 @@ import pandas as pd
 
 set_seed(CONFIG.seed)
 
-path = ""
+path = "model.bin"
 
 
 def validation(model, data_loader, device):
