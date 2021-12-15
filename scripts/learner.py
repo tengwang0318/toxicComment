@@ -47,11 +47,14 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
     return epoch_loss
 
 
-def valid_one_epoch(model, dataloader, device, epoch):
+def valid_one_epoch(model, dataloader, device, epoch, predictions, real_results):
     model.eval()
     data_size = 0
     running_loss = 0
+    # predictions, real_results = np.ones((len(dataloader), 1)), np.ones((len(dataloader), 1))
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
+
+    idx = 0
     for step, data in bar:
         with torch.no_grad():
             more_toxic_ids = data['more_toxic_ids'].to(device, dtype=torch.long)
@@ -70,6 +73,14 @@ def valid_one_epoch(model, dataloader, device, epoch):
             data_size += batch_size
             epoch_loss = running_loss / data_size
             bar.set_postfix(EPOCH=epoch, VALIDATION_LOSS=epoch_loss)
+            try:
+                predictions[idx:idx + batch_size] = \
+                    (more_toxic_outputs > less_toxic_outputs).cpu().numpy()
+            except ValueError:
+                print(batch_size, (more_toxic_outputs > less_toxic_outputs).shape)
+
+            idx += batch_size
+    print("Precision: ", (real_results == predictions).sum() / len(real_results))
 
     return epoch_loss
 
@@ -85,18 +96,22 @@ def prepare_dataloader(fold):
                               pin_memory=True, drop_last=True)
     valid_loader = DataLoader(valid_dataset, batch_size=CONFIG.valid_batch_size, num_workers=2, shuffle=False,
                               pin_memory=True)
-    return train_loader, valid_loader
+
+    predictions, real_results = np.ones((len(df_valid), 1)), np.ones((len(df_valid), 1))
+
+    return train_loader, valid_loader, predictions, real_results
 
 
 def run_training(model, optimizer, scheduler, num_epochs, fold):
     best_model_weights = copy.deepcopy(model.state_dict())
     best_epoch_loss = np.inf
     history = defaultdict(list)
-    train_data_loader, valid_data_loader = prepare_dataloader(fold)
+    train_data_loader, valid_data_loader, predictions, real_results = prepare_dataloader(fold)
     for epoch in range(1, num_epochs + 1):
         train_epoch_loss = train_one_epoch(model, optimizer, scheduler, dataloader=train_data_loader,
                                            device=CONFIG.device, epoch=epoch)
-        valid_epoch_loss = valid_one_epoch(model, valid_data_loader, device=CONFIG.device, epoch=epoch)
+        valid_epoch_loss = valid_one_epoch(model, valid_data_loader, device=CONFIG.device, epoch=epoch,
+                                           predictions=predictions, real_results=real_results)
         history['TRAIN_LOSS'].append(train_epoch_loss)
         history['VALID_LOSS'].append(valid_epoch_loss)
 
@@ -106,7 +121,7 @@ def run_training(model, optimizer, scheduler, num_epochs, fold):
             best_model_weights = copy.deepcopy(model.state_dict())
             PATH = f"FOLD-{fold}.bin"
             torch.save(model.state_dict(), PATH)
-    print("best epoch loss ",best_epoch_loss)
+    print("best epoch loss ", best_epoch_loss)
     return model, history
 
 

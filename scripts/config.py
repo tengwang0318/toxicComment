@@ -8,8 +8,8 @@ class CONFIG:
     seed = 318
     epochs = 5
     model_name = 'roberta-base'
-    train_batch_size = 16
-    valid_batch_size = 16
+    train_batch_size = 4
+    valid_batch_size = 4
     learning_rate = 1e-4
     scheduler = "CosineAnnealingLR"
     min_learning_rate = 1e-6
@@ -17,7 +17,7 @@ class CONFIG:
     weight_decay = 1e-6
     n_fold = 5
     n_classes = 1
-    max_length = 150
+    max_length = 512
 
 
     margin = .5
