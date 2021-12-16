@@ -23,12 +23,13 @@ def train_one_epoch(model, optimizer, scheduler, dataloader, device, epoch):
         text1_mask = data['text1_mask'].to(device, dtype=torch.long)
         text2_ids = data['text2_ids'].to(device, dtype=torch.long)
         text2_mask = data['text2_mask'].to(device, dtype=torch.long)
-        targets = data['target'].to(device, dtype=torch.long)
+        targets = data['target'].to(device, dtype=torch.float)
 
         batch_size = text1_ids.size(0)
         predicts = model(text1_ids, text1_mask, text2_ids, text2_mask)
-
+        predicts = predicts.squeeze()
         loss = loss_function(predicts, targets)
+
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -57,10 +58,11 @@ def valid_one_epoch(model, dataloader, device, epoch, predictions, real_results)
             text1_mask = data['text1_mask'].to(device, dtype=torch.long)
             text2_ids = data['text2_ids'].to(device, dtype=torch.long)
             text2_mask = data['text2_mask'].to(device, dtype=torch.long)
-            targets = data['target'].to(device, dtype=torch.long)
+            targets = data['target'].to(device, dtype=torch.float)
 
             batch_size = text1_ids.size(0)
             outputs = model(text1_ids, text1_mask, text2_ids, text2_mask)
+            outputs = outputs.squeeze()
 
             loss = loss_function(outputs, targets)
 
@@ -69,11 +71,12 @@ def valid_one_epoch(model, dataloader, device, epoch, predictions, real_results)
             epoch_loss = running_loss / data_size
             bar.set_postfix(EPOCH=epoch, VALIDATION_LOSS=epoch_loss)
 
-            predictions[idx:idx + batch_size] = outputs
-            real_results[idx:idx + batch_size] = targets
+            predictions[idx:idx + batch_size] = outputs.cpu().squeeze() > 0.5
+            real_results[idx:idx + batch_size] = targets.cpu().squeeze()
 
             idx += batch_size
-    print("Precision: ", precision_score(predictions, real_results))
+
+    print("Precision: ", precision_score(real_results, predictions))
 
     return epoch_loss
 
@@ -82,7 +85,8 @@ def prepare_dataloader(fold):
     df = create_Folds()
     df_train = df[df.Kfold != fold].reset_index(drop=True)
     df_valid = df[df.Kfold == fold].reset_index(drop=True)
-
+    # df_train = df_train[:int(len(df_train)*0.01)]
+    # df_valid = df_valid[:int(len(df_valid)*0.01)]
     train_dataset = ToxicDataset(df_train, tokenizer=CONFIG.tokenizer, max_length=CONFIG.max_length)
     valid_dataset = ToxicDataset(df_valid, tokenizer=CONFIG.tokenizer, max_length=CONFIG.max_length)
     train_loader = DataLoader(train_dataset, batch_size=CONFIG.train_batch_size, num_workers=2, shuffle=True,
@@ -90,7 +94,7 @@ def prepare_dataloader(fold):
     valid_loader = DataLoader(valid_dataset, batch_size=CONFIG.valid_batch_size, num_workers=2, shuffle=False,
                               pin_memory=True)
 
-    predictions, real_results = np.ones((len(df_valid), 1)), np.ones((len(df_valid), 1))
+    predictions, real_results = np.ones((len(df_valid))), np.ones((len(df_valid)))
 
     return train_loader, valid_loader, predictions, real_results
 

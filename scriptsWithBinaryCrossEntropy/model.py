@@ -24,5 +24,6 @@ class Model(nn.Module):
         out2 = self.drop(out2[1])
         out = torch.cat([out1, out2], dim=1)
         outputs = self.fc(out)
+        outputs = self.sigmoid(outputs)
         # outputs2 = self.fc(out2)
         return outputs
