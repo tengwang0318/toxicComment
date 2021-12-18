@@ -17,7 +17,7 @@ class Model(nn.Module):
 
     def forward(self, ids, mask):
         out = self.model(input_ids=ids, attention_mask=mask, output_hidden_states=False)
-        out = self.drop(out[1])
+        out = out['pooler_output']
+        out = self.drop(out)
         outputs = self.fc(out)
         return outputs
-
