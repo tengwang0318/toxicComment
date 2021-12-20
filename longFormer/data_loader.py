@@ -8,8 +8,27 @@ import torch
 set_seed(CONFIG.seed)
 
 
+def clean(data, col):  # Replace each occurrence of pattern/regex in the Series/Index
+
+    # Clean some punctutations
+    data[col] = data[col].str.replace('\n', ' \n ')
+    data[col] = data[col].str.replace(r'([a-zA-Z]+)([/!?.])([a-zA-Z]+)', r'\1 \2 \3')
+    # Replace repeating characters more than 3 times to length of 3
+    data[col] = data[col].str.replace(r'([*!?\'])\1\1{2,}', r'\1\1\1')
+    # Add space around repeating characters
+    data[col] = data[col].str.replace(r'([*!?\']+)', r' \1 ')
+    # patterns with repeating characters
+    data[col] = data[col].str.replace(r'([a-zA-Z])\1{2,}\b', r'\1\1')
+    data[col] = data[col].str.replace(r'([a-zA-Z])\1\1{2,}\B', r'\1\1\1')
+    data[col] = data[col].str.replace(r'[ ]{2,}', ' ').str.strip()
+
+    return data  # the function returns the processed value
+
+
 def create_Folds():
     df = pd.read_csv('../jigsaw-toxic-severity-rating/validation_data.csv')
+    df = clean(df, 'more_toxic')
+    df = clean(df, 'less_toxic')
     skf = StratifiedKFold(n_splits=CONFIG.n_fold, shuffle=True, random_state=CONFIG.seed)
 
     for fold, (_, val) in enumerate(skf.split(X=df, y=df.worker)):

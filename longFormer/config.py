@@ -6,10 +6,10 @@ import numpy as np
 
 class CONFIG:
     seed = 318
-    epochs = 3
+    epochs = 2
     model_name = 'allenai/longformer-base-4096'
-    train_batch_size = 4
-    valid_batch_size = 4
+    train_batch_size = 1
+    valid_batch_size = 1
     learning_rate = 1e-5
     scheduler = "CosineAnnealingLR"
     min_learning_rate = 1e-7
